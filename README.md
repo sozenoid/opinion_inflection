@@ -25,6 +25,84 @@ low credulity, and high network connectivity.
 
 ---
 
+## Gallery
+
+### Vote share evolution — annotated events
+
+The three vertical dashed lines mark the economic recession (step 30), the
+pro-family campaign (step 50), and the healthcare crisis (step 70). Each event
+shifts the corresponding party's trajectory.
+
+![Vote share evolution with annotated events](assets/vote_share_annotated.png)
+
+---
+
+### Spatial opinion map — before and after
+
+10 000 nodes placed in five city clusters. Each dot is coloured by the party
+it is most likely to vote for. After 100 steps, party boundaries sharpen
+around the clusters.
+
+![Spatial opinion map before and after](assets/spatial_before_after.png)
+
+---
+
+### Effect of the bounded-confidence threshold ε
+
+Lowering ε (from 0.40 to 0.15) makes nodes ignore anyone whose opinions differ
+too much, driving the population into tighter ideological bubbles.
+
+![Confidence threshold comparison](assets/confidence_comparison.png)
+
+---
+
+### Polarisation index over time
+
+At a tight threshold (ε = 0.15) the community rapidly fragments into
+entrenched blocs. At the default (ε = 0.40) opinion diversity is largely
+preserved.
+
+![Polarisation over time](assets/polarisation_over_time.png)
+
+---
+
+### Vote share stacked area — default run
+
+Stacked area chart produced by `plot_vote_share_evolution`. Each band is one
+party; the total always sums to 1.
+
+![Vote share stacked area](assets/vote_share_evolution.png)
+
+---
+
+### Raw opinion trajectories — 80 sampled nodes
+
+Each line is one node's raw score for the Conservative party over 100 steps.
+The spread gradually narrows as peer influence pulls outliers toward the crowd.
+
+![Opinion trajectories](assets/opinion_trajectories.png)
+
+---
+
+### Opinion score distribution snapshots
+
+Histogram of raw scores for the Conservative party at five evenly-spaced
+snapshots. The distribution tightens over time as the simulation converges.
+
+![Opinion histogram](assets/opinion_histogram.png)
+
+---
+
+### Node attribute prior distributions
+
+All seven attributes are drawn independently from Beta distributions at
+initialisation. `capital` and `charisma` are right-skewed (most nodes are
+ordinary); `credulity` is roughly symmetric around 0.5.
+
+![Attribute distributions](assets/attribute_distributions.png)
+
+---
+
 ## Features
 
 - **Multi-party** — any number of parties *P*
@@ -84,6 +162,7 @@ and saves four PNG plots to the current directory.
 opinion_inflection/
 ├── config.py               # SimConfig dataclass — all parameters in one place
 ├── requirements.txt
+├── assets/                 # Generated plots (README illustrations)
 ├── opsim/
 │   ├── __init__.py
 │   ├── node.py             # Attribute & opinion array initialisation
