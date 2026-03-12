@@ -54,6 +54,16 @@ def base_config(**kwargs):
         n_steps=100,
         history_interval=1,
         random_seed=42,
+        # Give each city a distinct partisan lean so spatial clusters are
+        # visually identifiable.  Cities 0–2 have strong leans; 3–4 have
+        # moderate secondary leans.
+        city_opinion_biases=[
+            (0, 0.6),   # city 0 (30 %) → Conservative
+            (1, 0.6),   # city 1 (25 %) → Progressive
+            (2, 0.6),   # city 2 (20 %) → Green
+            (0, 0.4),   # city 3 (15 %) → Conservative (secondary)
+            (1, 0.4),   # city 4 (10 %) → Progressive  (secondary)
+        ],
     )
     defaults.update(kwargs)
     return SimConfig(**defaults)

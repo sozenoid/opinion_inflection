@@ -36,6 +36,9 @@ class Simulation:
         # Initialise node state
         self.attributes: NDArray = initialize_attributes(config, self.rng)
         self.opinions: NDArray = initialize_opinions(config, self.rng)
+        if config.city_opinion_biases is not None:
+            for city_idx, (party_idx, bias) in enumerate(config.city_opinion_biases):
+                self.opinions[self.city_ids == city_idx, party_idx] += bias
 
         # Events
         self.event_schedule = event_schedule or EventSchedule()

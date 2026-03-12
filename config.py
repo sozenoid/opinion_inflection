@@ -56,6 +56,10 @@ class SimConfig:
     # --- Opinion initialisation ---
     opinion_mean: float = 0.0
     opinion_std: float = 0.15  # 0.3 put initial L2 distances (~0.73) far above the
+    # Per-city bias: list of (party_index, offset) tuples, one per city.
+    # Adds `offset` to every node in that city's opinion score for `party_index`,
+    # giving each city a distinct initial lean.  None → uniform initialisation.
+    city_opinion_biases: list[tuple[int, float]] | None = None
     # default confidence_threshold (0.4), cutting ~85% of edges immediately and
     # making peer influence negligible between events.  0.15 gives distances ~0.37,
     # keeping ~70% of edges active so convergence dynamics are clearly visible.
