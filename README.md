@@ -103,6 +103,86 @@ ordinary); `credulity` is roughly symmetric around 0.5.
 
 ---
 
+## Gallery — extended run (12 cities · 5 parties · 10 events)
+
+The scenarios below use 15 000 nodes distributed across **12 cities** of
+varying population sizes, **5 parties**, and **10 staggered events** spanning
+the full 150-step simulation.
+
+Events fired (in order):
+
+| Step | Event | Beneficiary |
+|---|---|---|
+| 10 | Recession shock — reduces `capital` | Progressive |
+| 20 | Conservative tax-cut campaign | Conservative |
+| 35 | Green climate bill | Green |
+| 50 | Progressive housing plan | Progressive |
+| 60 | Health system crisis — reduces `health_status` | Green |
+| 70 | Libertarian deregulation push | Libertarian |
+| 80 | Populist anti-elite surge | Populist |
+| 95 | Conservative security platform | Conservative |
+| 110 | Education reform | Progressive |
+| 130 | Late economic recovery — restores `capital` | Libertarian |
+
+---
+
+### Spatial opinion map — initial, mid, and final
+
+Each dot is one node, coloured by its leading party. Over 150 steps the
+city clusters develop distinct partisan identities as peer influence and
+targeted events reshape the landscape.
+
+![Spatial map at 3 time points](assets/spatial_12cities_3steps.png)
+
+---
+
+### Vote share evolution — 5 parties, 10 events
+
+Line chart of aggregate vote shares. Every dashed vertical line marks one
+event; the trajectory of the beneficiary party visibly responds each time.
+
+![Vote share 5 parties with events](assets/vote_share_5party_events.png)
+
+---
+
+### Stacked vote-share area chart
+
+The same data as above rendered as a stacked area — useful for seeing how
+total shares redistribute after each shock.
+
+![Stacked vote share 5 parties](assets/stacked_5party_events.png)
+
+---
+
+### Per-party opinion spread over time
+
+Variance of each party's vote-probability column across all nodes.
+A spike indicates that a matching event caused opinion to become more
+concentrated (or more dispersed) around that party.
+
+![Per-party opinion spread](assets/per_party_spread.png)
+
+---
+
+### Final vote shares by city
+
+Bar chart of mean vote shares per city at step 150. Smaller, more
+isolated cities tend to converge on a single dominant party, while large
+hubs remain more pluralistic.
+
+![City-level vote shares](assets/city_vote_shares.png)
+
+---
+
+### Opinion trajectories — all 5 parties
+
+Raw opinion score traces for 40 randomly sampled nodes, one panel per
+party. Jumps at event steps are visible as sudden shifts in the band.
+
+![Opinion trajectories 5 parties](assets/trajectories_5parties.png)
+
+---
+
 ## Features
 
 - **Multi-party** — any number of parties *P*
