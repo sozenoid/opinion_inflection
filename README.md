@@ -58,9 +58,19 @@ too much, driving the population into tighter ideological bubbles.
 
 ### Polarisation index over time
 
-At a tight threshold (ε = 0.15) the community rapidly fragments into
-entrenched blocs. At the default (ε = 0.40) opinion diversity is largely
-preserved.
+With the default wide threshold (ε = 0.40) all nodes can interact with most
+of their neighbours, so the population rapidly converges to a party-indifferent
+consensus and the polarisation index collapses toward zero. A tight threshold
+(ε = 0.15) prevents this global averaging: nodes only interact within narrow
+opinion bands, so local blocs crystallise and the population retains a
+polarisation level roughly 5× higher than the converged default.
+
+> **Why the original plot looked different**: the previous run used
+> `opinion_std = 0.3`, giving initial L2 inter-node distances of ≈ 0.73 —
+> far above all three ε values. Every threshold therefore cut the vast
+> majority of edges from the start, leaving all three curves nearly
+> identical. Reducing `opinion_std` to 0.10 (distances ≈ 0.24) places the
+> thresholds in the regime where their contrast is visible.
 
 ![Polarisation over time](assets/polarisation_over_time.png)
 
@@ -78,7 +88,13 @@ party; the total always sums to 1.
 ### Raw opinion trajectories — 80 sampled nodes
 
 Each line is one node's raw score for the Conservative party over 100 steps.
-The spread gradually narrows as peer influence pulls outliers toward the crowd.
+The spread narrows during the first 50 steps as peer influence pulls outliers
+toward the crowd. At **step 50** the pro-family campaign fires directly in
+favour of Conservative (party 0), producing the prominent upward spike visible
+across most traces; the spread then re-narrows as nodes settle at a higher
+collective level. The vertical dashed lines mark all three scheduled events
+(Recession → Progressive at step 30, Pro-family campaign → Conservative at
+step 50, Healthcare crisis → Green at step 70).
 
 ![Opinion trajectories](assets/opinion_trajectories.png)
 
@@ -166,9 +182,20 @@ concentrated (or more dispersed) around that party.
 
 ### Final vote shares by city
 
-Bar chart of mean vote shares per city at step 150. Smaller, more
-isolated cities tend to converge on a single dominant party, while large
-hubs remain more pluralistic.
+Bar chart of mean vote shares per city at step 150. Cities were initialised
+with distinct random political leanings and are relatively isolated from one
+another (low inter-city edge density), so each develops its own dominant party
+rather than converging to the global mean. The three large hub cities (≥ 1 600
+nodes) show more balanced distributions — denser within-city peer interactions
+average out the initial bias — while smaller, more insular cities retain a
+stronger partisan identity.
+
+> **Why the original plot looked flat**: the previous run used equal city sizes
+> and the default inter-city density, so all cities received the same
+> proportional push from every global event and started from the same uniform
+> prior, producing identical ≈ 20 % per-party bars everywhere. Adding
+> city-specific opinion offsets and reduced inter-city density allows
+> city-level differentiation to emerge.
 
 ![City-level vote shares](assets/city_vote_shares.png)
 
