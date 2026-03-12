@@ -1,3 +1,4 @@
 __pycache__/
 *.png
+!assets/*.png
 .pytest_cache/
