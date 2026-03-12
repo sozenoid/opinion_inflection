@@ -1,8 +1,8 @@
 # Opinion Inflection
 
 A large-scale agent-based simulator of opinion dynamics and voting intentions.
-Models how opinions evolve in a community through peer influence and targeted
-external messaging, using a sparse directed network of up to 10 000+ nodes.
+Models how opinions evolve in a community through peer influence and real-world
+shocks, using a sparse directed network of up to 10 000+ nodes.
 
 ---
 
@@ -15,7 +15,7 @@ into a single, vectorised Python framework:
 |---|---|---|
 | Peer influence | DeGroot averaging | Neighbours pull opinions toward their own |
 | Bounded confidence | Deffuant model | Nodes only listen to neighbours within an opinion-distance threshold |
-| Targeted messaging | Custom attribute-mediated model | Party campaigns and real-world shocks nudge voters whose profiles match the message |
+| Platform-driven events | Custom attribute-mediated model | Real-world shocks shift voter attributes; parties gain or lose support based on how their platform aligns with those shifts — no party ever hard-codes which events benefit it |
 
 Each node carries a socio-demographic attribute profile (health, wealth, family
 status, education, age, credulity, charisma). Opinions are raw scores over
@@ -29,9 +29,18 @@ low credulity, and high network connectivity.
 
 ### Vote share evolution — annotated events
 
-The three vertical dashed lines mark the economic recession (step 30), the
-pro-family campaign (step 50), and the healthcare crisis (step 70). Each event
-shifts the corresponding party's trajectory.
+Cities start with different partisan leans (Conservative leads with two
+Conservative-leaning cities). The three vertical dashed lines mark the events:
+
+- **Step 30 — Economic recession** (`capital` falls): nodes become poorer →
+  Progressive (platform: appeals to low-capital voters) gains; Conservative loses.
+- **Step 50 — Pro-family campaign** (`family_status` rises): family-values salience
+  increases → Conservative (platform: appeals to high-family voters) gains; Green loses.
+- **Step 70 — Healthcare crisis** (`health_status` falls): health deteriorates →
+  Green (platform: appeals to health-concerned voters) gains; Progressive loses slightly.
+
+None of these beneficiaries are specified in the events. They emerge from each
+party's platform alignment with the attribute change.
 
 ![Vote share evolution with annotated events](assets/vote_share_annotated.png)
 
@@ -39,9 +48,9 @@ shifts the corresponding party's trajectory.
 
 ### Spatial opinion map — before and after
 
-10 000 nodes placed in five city clusters. Each dot is coloured by the party
-it is most likely to vote for. After 100 steps, party boundaries sharpen
-around the clusters.
+10 000 nodes in five city clusters, each given a distinct initial partisan lean.
+Each dot is coloured by the party it is most likely to vote for. After 100 steps,
+peer influence within the bounded-confidence band sharpens the cluster boundaries.
 
 ![Spatial opinion map before and after](assets/spatial_before_after.png)
 
@@ -49,8 +58,10 @@ around the clusters.
 
 ### Effect of the bounded-confidence threshold ε
 
-Lowering ε (from 0.40 to 0.15) makes nodes ignore anyone whose opinions differ
-too much, driving the population into tighter ideological bubbles.
+With `ε = 0.40` (left), within-city peer influence is strong and nodes converge
+quickly to a city-level consensus, producing solid coloured blobs. With `ε = 0.15`
+(right), even within-city nodes are often too far apart to interact, so opinions
+remain more dispersed.
 
 ![Confidence threshold comparison](assets/confidence_comparison.png)
 
@@ -58,19 +69,12 @@ too much, driving the population into tighter ideological bubbles.
 
 ### Polarisation index over time
 
-With the default wide threshold (ε = 0.40) all nodes can interact with most
-of their neighbours, so the population rapidly converges to a party-indifferent
+With the default wide threshold (`ε = 0.40`) all nodes can interact with most of
+their neighbours, so the population rapidly converges to a party-indifferent
 consensus and the polarisation index collapses toward zero. A tight threshold
-(ε = 0.15) prevents this global averaging: nodes only interact within narrow
+(`ε = 0.15`) prevents this global averaging: nodes only interact within narrow
 opinion bands, so local blocs crystallise and the population retains a
 polarisation level roughly 5× higher than the converged default.
-
-> **Why the original plot looked different**: the previous run used
-> `opinion_std = 0.3`, giving initial L2 inter-node distances of ≈ 0.73 —
-> far above all three ε values. Every threshold therefore cut the vast
-> majority of edges from the start, leaving all three curves nearly
-> identical. Reducing `opinion_std` to 0.10 (distances ≈ 0.24) places the
-> thresholds in the regime where their contrast is visible.
 
 ![Polarisation over time](assets/polarisation_over_time.png)
 
@@ -87,14 +91,13 @@ party; the total always sums to 1.
 
 ### Raw opinion trajectories — 80 sampled nodes
 
-Each line is one node's raw score for the Conservative party over 100 steps.
-The spread narrows during the first 50 steps as peer influence pulls outliers
-toward the crowd. At **step 50** the pro-family campaign fires directly in
-favour of Conservative (party 0), producing the prominent upward spike visible
-across most traces; the spread then re-narrows as nodes settle at a higher
-collective level. The vertical dashed lines mark all three scheduled events
-(Recession → Progressive at step 30, Pro-family campaign → Conservative at
-step 50, Healthcare crisis → Green at step 70).
+Each line is one node's raw score for Conservative over 100 steps. Two visible
+streams emerge from the city biases — nodes in Conservative-leaning cities (upper
+band) and nodes in other cities (lower band). Peer influence within each city
+draws the streams inward during steps 0–30. At **step 50** the pro-family campaign
+raises `family_status`, which aligns strongly with Conservative's platform, lifting
+the upper stream sharply. The lower stream is largely unaffected. The vertical
+dashed lines mark all three events.
 
 ![Opinion trajectories](assets/opinion_trajectories.png)
 
@@ -103,7 +106,8 @@ step 50, Healthcare crisis → Green at step 70).
 ### Opinion score distribution snapshots
 
 Histogram of raw scores for the Conservative party at five evenly-spaced
-snapshots. The distribution tightens over time as the simulation converges.
+snapshots. The distribution tightens and shifts over time as peer influence and
+events reshape the population.
 
 ![Opinion histogram](assets/opinion_histogram.png)
 
@@ -125,20 +129,30 @@ The scenarios below use 15 000 nodes distributed across **12 cities** of
 varying population sizes, **5 parties**, and **10 staggered events** spanning
 the full 150-step simulation.
 
-Events fired (in order):
+Each party's platform determines which events benefit it:
 
-| Step | Event | Beneficiary |
-|---|---|---|
-| 10 | Recession shock — reduces `capital` | Progressive |
-| 20 | Conservative tax-cut campaign | Conservative |
-| 35 | Green climate bill | Green |
-| 50 | Progressive housing plan | Progressive |
-| 60 | Health system crisis — reduces `health_status` | Green |
-| 70 | Libertarian deregulation push | Libertarian |
-| 80 | Populist anti-elite surge | Populist |
-| 95 | Conservative security platform | Conservative |
-| 110 | Education reform | Progressive |
-| 130 | Late economic recovery — restores `capital` | Libertarian |
+| Party | Key platform weights |
+|---|---|
+| Conservative | `family_status` +8, `age` +5, `capital` +4 |
+| Progressive | `capital` −7, `education` +5 |
+| Green | `health_status` −6, `age` −4 |
+| Libertarian | `capital` +6, `education` +4 |
+| Populist | `credulity` +7, `family_status` +4, `capital` −3 |
+
+Events fired (in order), with the attribute change and which party benefits:
+
+| Step | Event | Attribute delta | Benefits |
+|---|---|---|---|
+| 10 | Recession shock | `capital` −0.15 | Progressive, Populist |
+| 20 | Tax-cut campaign | `capital` +0.10, `education` +0.05 | Libertarian, Conservative |
+| 35 | Green climate bill | `health_status` +0.05, `age` −0.03 | Green |
+| 50 | Progressive housing plan | `capital` −0.05 | Progressive, Populist |
+| 60 | Health system crisis | `health_status` −0.20 | Green |
+| 70 | Libertarian deregulation | `capital` +0.08, `education` +0.04 | Libertarian |
+| 80 | Populist anti-elite surge | `credulity` +0.10, `family_status` +0.05 | Populist, Conservative |
+| 95 | Conservative security push | `age` +0.05, `family_status` +0.06 | Conservative |
+| 110 | Education reform | `education` +0.10 | Progressive, Libertarian |
+| 130 | Late economic recovery | `capital` +0.10 | Libertarian, Conservative |
 
 ---
 
@@ -146,7 +160,7 @@ Events fired (in order):
 
 Each dot is one node, coloured by its leading party. Over 150 steps the
 city clusters develop distinct partisan identities as peer influence and
-targeted events reshape the landscape.
+events reshape the landscape.
 
 ![Spatial map at 3 time points](assets/spatial_12cities_3steps.png)
 
@@ -155,7 +169,8 @@ targeted events reshape the landscape.
 ### Vote share evolution — 5 parties, 10 events
 
 Line chart of aggregate vote shares. Every dashed vertical line marks one
-event; the trajectory of the beneficiary party visibly responds each time.
+event; parties respond according to their platform alignment with the
+attribute change — no event specifies a beneficiary.
 
 ![Vote share 5 parties with events](assets/vote_share_5party_events.png)
 
@@ -173,8 +188,8 @@ total shares redistribute after each shock.
 ### Per-party opinion spread over time
 
 Variance of each party's vote-probability column across all nodes.
-A spike indicates that a matching event caused opinion to become more
-concentrated (or more dispersed) around that party.
+Events that strongly align with a party's platform cause a spike in that
+party's spread as opinion shifts become concentrated.
 
 ![Per-party opinion spread](assets/per_party_spread.png)
 
@@ -183,19 +198,9 @@ concentrated (or more dispersed) around that party.
 ### Final vote shares by city
 
 Bar chart of mean vote shares per city at step 150. Cities were initialised
-with distinct random political leanings and are relatively isolated from one
-another (low inter-city edge density), so each develops its own dominant party
-rather than converging to the global mean. The three large hub cities (≥ 1 600
-nodes) show more balanced distributions — denser within-city peer interactions
-average out the initial bias — while smaller, more insular cities retain a
-stronger partisan identity.
-
-> **Why the original plot looked flat**: the previous run used equal city sizes
-> and the default inter-city density, so all cities received the same
-> proportional push from every global event and started from the same uniform
-> prior, producing identical ≈ 20 % per-party bars everywhere. Adding
-> city-specific opinion offsets and reduced inter-city density allows
-> city-level differentiation to emerge.
+with distinct partisan leans and are relatively isolated from one another
+(low inter-city edge density), so each develops its own dominant party
+rather than converging to the global mean.
 
 ![City-level vote shares](assets/city_vote_shares.png)
 
@@ -204,7 +209,8 @@ stronger partisan identity.
 ### Opinion trajectories — all 5 parties
 
 Raw opinion score traces for 40 randomly sampled nodes, one panel per
-party. Jumps at event steps are visible as sudden shifts in the band.
+party. City biases create initial streams within each panel; events shift
+the streams according to platform alignment.
 
 ![Opinion trajectories 5 parties](assets/trajectories_5parties.png)
 
@@ -212,18 +218,20 @@ party. Jumps at event steps are visible as sudden shifts in the band.
 
 ## Features
 
-- **Multi-party** — any number of parties *P*
+- **Multi-party** — any number of parties *P*, each with its own platform
 - **Large-scale** — 10 000+ nodes via `scipy.sparse` CSR matrices throughout
 - **Spatial city clusters** — configurable number of cities with intra- and inter-city
   edge densities; 2D positions stored for visualisation
+- **City partisan leans** — optional per-city opinion biases give each cluster a
+  distinct starting identity
 - **Attribute-driven susceptibility** — peer influence and message receptivity scale
   with each node's attribute profile
 - **Charisma-scaled influence** — outgoing edge weights are multiplied by the sender's
   charisma at runtime; the weight matrix itself is never mutated
-- **Targeted external events** — each `ExternalEvent` carries an `attribute_appeal`
-  vector (who resonates with it), `strength` / `effectiveness` scalars, optional
-  `attribute_deltas` (e.g. an economic shock that directly reduces `capital`), and an
-  optional `target_filter` predicate
+- **Platform-driven events** — `ExternalEvent` describes only real-world attribute
+  changes (`attribute_deltas`) and which nodes are susceptible (`attribute_appeal`).
+  Which party gains or loses support emerges automatically from each `Party`'s
+  platform alignment: `Δopinion[i,p] = (platform·Δattrs) × (appeal·attrs[i]) × receptivity[i]`
 - **Synchronous vectorised updates** — all four phases (attribute deltas → message
   nudges → peer influence → noise) are computed from time-*t* values before writing,
   giving reproducible, parallelism-friendly dynamics
@@ -273,12 +281,14 @@ opinion_inflection/
 │   ├── __init__.py
 │   ├── node.py             # Attribute & opinion array initialisation
 │   ├── network.py          # Spatial 2D city-cluster graph (sparse)
-│   ├── events.py           # ExternalEvent & EventSchedule
+│   ├── events.py           # Party, ExternalEvent & EventSchedule
 │   ├── dynamics.py         # Vectorised per-step update
 │   ├── simulation.py       # Simulation engine + history recording
 │   └── analysis.py         # Vote prediction, polarisation metrics, plots
 ├── examples/
-│   └── basic_run.py        # End-to-end demo
+│   ├── basic_run.py              # End-to-end 3-party demo
+│   ├── regenerate_basic_plots.py # Regenerate 3-party gallery images
+│   └── regenerate_fixed_plots.py # Regenerate polarisation + 5-party images
 └── tests/
     ├── test_node.py
     ├── test_dynamics.py
@@ -293,12 +303,19 @@ All parameters are collected in `config.py`:
 
 ```python
 from config import SimConfig
+from opsim.events import Party
+
+parties = [
+    Party("Conservative", platform={"family_status": +8.0, "capital": +5.0, "age": +3.0}),
+    Party("Progressive",  platform={"capital": -7.0, "education": +4.0}),
+    Party("Green",        platform={"health_status": -6.0, "age": -3.0}),
+]
 
 config = SimConfig(
     n_nodes=10_000,
     n_parties=3,
     n_cities=5,
-    city_sizes=[0.30, 0.25, 0.20, 0.15, 0.10],  # relative; normalised internally
+    city_sizes=[0.30, 0.25, 0.20, 0.15, 0.10],
     city_radius=0.1,
     intra_city_density=0.005,
     inter_city_density=0.0005,
@@ -307,6 +324,14 @@ config = SimConfig(
     n_steps=100,
     history_interval=1,
     random_seed=42,
+    parties=parties,
+    city_opinion_biases=[        # give each cluster a distinct starting lean
+        (0, 0.6),  # city 0 → Conservative
+        (1, 0.6),  # city 1 → Progressive
+        (2, 0.6),  # city 2 → Green
+        (0, 0.4),  # city 3 → Conservative (secondary)
+        (1, 0.4),  # city 4 → Progressive  (secondary)
+    ],
 )
 ```
 
@@ -339,39 +364,59 @@ Weights are configurable via `susceptibility_weights` in `SimConfig`.
 
 ---
 
-## External Events
+## Parties and Events
+
+### Defining parties
+
+```python
+from opsim.events import Party
+
+# Positive weight → party appeals to voters HIGH in that attribute
+# Negative weight → party appeals to voters LOW in that attribute
+conservative = Party(
+    name="Conservative",
+    platform={
+        "family_status": +8.0,   # appeals to family-values voters
+        "capital":       +5.0,   # appeals to wealthier voters
+        "age":           +3.0,   # appeals to older voters
+    },
+)
+```
+
+### Defining events
 
 ```python
 from opsim.events import ExternalEvent, EventSchedule
 
+# Events describe real-world changes only.
+# Which party benefits is never specified — it emerges from platform alignment.
 recession = ExternalEvent(
     name="Economic recession",
     time_step=30,
-    party_index=1,           # which party benefits
-    strength=0.7,            # message budget [0, 1]
-    effectiveness=0.6,       # message quality [0, 1]
-    attribute_appeal={"capital": 0.8, "family_status": 0.3},
-    attribute_deltas={"capital": -0.15},   # direct shock to attributes
+    strength=0.7,            # overall event intensity [0, 1]
+    effectiveness=0.6,       # how salient the event is [0, 1]
+    attribute_appeal={"capital": 0.8},       # capital-sensitive nodes react most
+    attribute_deltas={"capital": -0.15},     # capital falls for affected nodes
 )
+# → Progressive (platform capital: -7.0) gains: (-7.0) × (-0.15) = +1.05
+# → Conservative (platform capital: +5.0) loses: (+5.0) × (-0.15) = -0.75
 
 schedule = EventSchedule([recession, ...])
 ```
 
-**How a message affects node *i*:**
+**How the opinion nudge is computed for each node *i* and party *p*:**
 
 ```
-relevance_i    = attribute_appeal · attributes[i]     (dot product)
-receptivity_i  = credulity[i] × strength × effectiveness
-opinion_delta  = relevance_i × receptivity_i
-opinions[i, party_index] += opinion_delta
+platform_gain  = party_p.platform · event.attribute_deltas   (scalar)
+node_resonance = event.attribute_appeal · attributes[i]       (scalar)
+receptivity    = credulity[i] × strength × effectiveness      (scalar)
+
+Δopinion[i, p] = platform_gain × node_resonance × receptivity
 ```
 
-A well-off, high-credulity node resonating with a high-budget campaign shifts
-substantially; a sceptical or non-matching node barely moves.
-
-Non-partisan shocks (e.g. a natural disaster) can omit `party_index` and only
-supply `attribute_deltas` to model real-world attribute changes without a direct
-opinion nudge.
+`platform_gain` captures how much the world change aligns with party *p*'s
+platform; `node_resonance` captures which nodes are most attentive to the
+event; `receptivity` captures individual susceptibility.
 
 ---
 
@@ -379,20 +424,28 @@ opinion nudge.
 
 ```python
 from config import SimConfig
-from opsim.events import ExternalEvent, EventSchedule
+from opsim.events import ExternalEvent, EventSchedule, Party
 from opsim.simulation import Simulation
 from opsim.analysis import predict_vote, compute_polarization, plot_vote_share_evolution
 
-config = SimConfig(n_nodes=5_000, n_parties=4, n_steps=200, random_seed=0)
+parties = [
+    Party("A", platform={"education": +5.0, "capital": -3.0}),
+    Party("B", platform={"capital": +5.0, "age": +3.0}),
+    Party("C", platform={"health_status": -4.0, "age": -3.0}),
+    Party("D", platform={"credulity": +6.0, "family_status": +4.0}),
+]
+
+config = SimConfig(n_nodes=5_000, n_parties=4, n_steps=200, random_seed=0,
+                   parties=parties)
 
 events = EventSchedule([
     ExternalEvent(
         name="Education reform",
         time_step=80,
-        party_index=2,
         strength=0.6,
         effectiveness=0.9,
         attribute_appeal={"education": 1.0},
+        attribute_deltas={"education": +0.10},   # education rises → Party A gains
     )
 ])
 
@@ -437,9 +490,17 @@ before writing):
 1. **Attribute deltas** — event shocks modify `attributes` in-place and clamp to [0, 1].
    Derived quantities (susceptibility, receptivity) are recomputed.
 
-2. **Message nudges** — for each partisan event, a relevance score is computed per node
-   via the dot product of `attribute_appeal` and the node's attribute vector, then scaled
-   by credulity × strength × effectiveness and added to the target party's opinion column.
+2. **Message nudges** — for each event, the opinion update for party *p* at node *i* is:
+
+   ```
+   Δopinion[i, p] = (party_p.platform · event.delta_attrs)
+                    × (event.appeal · attrs[i])
+                    × credulity[i] × strength × effectiveness
+   ```
+
+   The first factor is a scalar per party (how aligned the world change is with
+   that party's platform). The second and third are per-node (how susceptible this
+   node is to this event). No party ever specifies which events benefit it.
 
 3. **Peer influence (bounded confidence)** — the effective weight matrix
    `W_eff[i,j] = W_base[i,j] × charisma[i]` is built; edges where the Euclidean
@@ -467,8 +528,9 @@ The test suite covers:
 
 - Attribute initialisation shape and value ranges
 - Susceptibility and receptivity derivations
-- Message nudge: high-family-status nodes shift more than low-family-status nodes
-- High-credulity nodes shift more than low-credulity nodes under the same message
+- Platform-driven nudge: family-values party gains more from a family-status event for
+  high-family-status nodes than for low-family-status nodes
+- High-credulity nodes shift more than low-credulity nodes under the same event
 - Bounded confidence: opinions beyond ε receive zero peer influence
 - 2-node convergence
 - `predict_vote` sums to 1.0
@@ -482,6 +544,8 @@ This is a qualitative *what-if* exploration tool, not a forecasting model:
 
 - **Reductive attribute model** — seven attributes are a coarse approximation of human
   decision-making
+- **Linear platform model** — party appeal is a simple dot product; real voter–party
+  alignment is non-linear and context-dependent
 - **Hard bounded confidence** — creates sharper opinion clusters than a smooth decay
   kernel would
 - **Assumed topology** — imposed city-cluster structure; real networks include workplace,

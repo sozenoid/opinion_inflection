@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""End-to-end demo: 3 parties, 10 000 nodes, 5 cities, two external events."""
+"""End-to-end demo: 3 parties, 10 000 nodes, 5 cities, three external events.
+
+Events describe real-world changes only.  Which party benefits is determined
+automatically by each party's platform alignment with the attribute deltas.
+"""
 
 import sys
 import os
 import time
 
-# Allow imports from project root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from config import SimConfig
-from opsim.events import ExternalEvent, EventSchedule
+from opsim.events import ExternalEvent, EventSchedule, Party
 from opsim.simulation import Simulation
 from opsim.analysis import (
     predict_vote,
@@ -19,6 +22,27 @@ from opsim.analysis import (
     plot_spatial_opinions,
     plot_opinion_histogram,
 )
+
+
+# Party platforms:  positive weight → appeals to voters HIGH in that attribute
+#                   negative weight → appeals to voters LOW in that attribute
+PARTIES = [
+    Party("Conservative", platform={
+        "family_status": +8.0,   # family-values voters
+        "capital":       +5.0,   # wealthier voters
+        "age":           +3.0,   # older voters
+    }),
+    Party("Progressive", platform={
+        "capital":       -7.0,   # lower-income voters
+        "education":     +4.0,   # higher-education voters
+        "health_status": +2.0,
+    }),
+    Party("Green", platform={
+        "health_status": -6.0,   # voters with health concerns
+        "age":           -3.0,   # younger voters
+        "family_status": -2.5,
+    }),
+]
 
 
 def main():
@@ -35,37 +59,41 @@ def main():
         n_steps=100,
         history_interval=1,
         random_seed=42,
+        parties=PARTIES,
+        city_opinion_biases=[
+            (0, 0.6),   # city 0 → Conservative
+            (1, 0.6),   # city 1 → Progressive
+            (2, 0.6),   # city 2 → Green
+            (0, 0.4),   # city 3 → Conservative (secondary)
+            (1, 0.4),   # city 4 → Progressive  (secondary)
+        ],
     )
 
     # ── Events ────────────────────────────────────────────────────────
-
-    # Economic recession at step 30 — hurts capital, nudges toward Party 1
+    # Capital falls → Progressive (capital: -7) gains; Conservative loses.
     recession = ExternalEvent(
         name="Economic recession",
         time_step=30,
-        party_index=1,
         strength=0.7,
         effectiveness=0.6,
-        attribute_appeal={"capital": 0.8, "family_status": 0.3},
+        attribute_appeal={"capital": 0.8},
         attribute_deltas={"capital": -0.15},
     )
 
-    # Party 0 pro-family campaign at step 50
+    # Campaign raises family_status → Conservative (family: +8) gains; Green loses.
     pro_family = ExternalEvent(
-        name="Party 0 pro-family campaign",
+        name="Pro-family campaign",
         time_step=50,
-        party_index=0,
         strength=0.8,
         effectiveness=0.7,
-        attribute_appeal={"family_status": 0.9, "health_status": 0.2},
-        attribute_deltas={},
+        attribute_appeal={"family_status": 0.9},
+        attribute_deltas={"family_status": +0.08},
     )
 
-    # Healthcare crisis at step 70 — hurts health, nudges toward Party 2
+    # Health deteriorates → Green (health: -6) gains; Progressive loses slightly.
     health_crisis = ExternalEvent(
         name="Healthcare crisis",
         time_step=70,
-        party_index=2,
         strength=0.6,
         effectiveness=0.8,
         attribute_appeal={"health_status": 0.9, "age": 0.4},
@@ -86,7 +114,7 @@ def main():
     print(f"Done in {elapsed:.1f}s")
 
     # ── Results ───────────────────────────────────────────────────────
-    party_names = ["Conservative", "Progressive", "Green"]
+    party_names = [p.name for p in PARTIES]
     initial_shares = predict_vote(sim.opinion_history[0])
     final_shares = predict_vote(sim.opinion_history[-1])
 
@@ -103,7 +131,7 @@ def main():
 
     # ── Plots (save to files) ─────────────────────────────────────────
     import matplotlib
-    matplotlib.use("Agg")  # non-interactive backend
+    matplotlib.use("Agg")
 
     fig = plot_vote_share_evolution(sim, party_names)
     fig.savefig("vote_share_evolution.png", dpi=150, bbox_inches="tight")
