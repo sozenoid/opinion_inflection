@@ -9,7 +9,7 @@ from scipy import sparse
 
 from config import SimConfig
 from opsim.dynamics import step
-from opsim.events import EventSchedule
+from opsim.events import EventSchedule, Party
 from opsim.network import build_network
 from opsim.node import initialize_attributes, initialize_opinions
 
@@ -39,6 +39,11 @@ class Simulation:
         if config.city_opinion_biases is not None:
             for city_idx, (party_idx, bias) in enumerate(config.city_opinion_biases):
                 self.opinions[self.city_ids == city_idx, party_idx] += bias
+
+        # Resolve party list (fall back to anonymous parties with empty platforms)
+        self.parties: list[Party] = config.parties or [
+            Party(name=f"Party {i}") for i in range(config.n_parties)
+        ]
 
         # Events
         self.event_schedule = event_schedule or EventSchedule()
@@ -71,6 +76,7 @@ class Simulation:
                 events_now,
                 self.config,
                 self.rng,
+                parties=self.parties,
             )
 
         # Final snapshot

@@ -23,7 +23,7 @@ import numpy as np
 from scipy.special import softmax
 
 from config import SimConfig
-from opsim.events import ExternalEvent, EventSchedule
+from opsim.events import ExternalEvent, EventSchedule, Party
 from opsim.simulation import Simulation
 from opsim.analysis import (
     predict_vote,
@@ -41,6 +41,42 @@ COLORS = {"Conservative": "tab:red", "Progressive": "tab:blue", "Green": "tab:gr
 
 # ── Shared config & events ────────────────────────────────────────────────
 
+# Party platforms: positive weight = appeals to voters HIGH in that attribute;
+# negative weight = appeals to voters LOW in that attribute.
+# Events only describe world changes; which party benefits emerges from alignment.
+#
+# Scale note: the opinion nudge formula is
+#   Δopinion[i,p] = (platform · Δattrs) × (appeal · attrs[i]) × receptivity[i]
+# Since attribute_deltas are small (~0.1–0.2), platform weights need to be
+# larger (~5–8) to produce event effects comparable in magnitude to peer influence.
+PARTIES = [
+    Party(
+        name="Conservative",
+        platform={
+            "family_status": +8.0,   # appeals to family-values voters
+            "capital":       +5.0,   # appeals to wealthier voters
+            "age":           +3.0,   # appeals to older voters
+        },
+    ),
+    Party(
+        name="Progressive",
+        platform={
+            "capital":       -7.0,   # appeals to lower-income voters
+            "education":     +4.0,   # appeals to higher-education voters
+            "health_status": +2.0,   # mild appeal to health-secure voters
+        },
+    ),
+    Party(
+        name="Green",
+        platform={
+            "health_status": -6.0,   # appeals to voters with health concerns
+            "age":           -3.0,   # appeals to younger voters
+            "family_status": -2.5,   # mild appeal to non-traditional households
+        },
+    ),
+]
+
+
 def base_config(**kwargs):
     defaults = dict(
         n_nodes=10_000,
@@ -54,6 +90,7 @@ def base_config(**kwargs):
         n_steps=100,
         history_interval=1,
         random_seed=42,
+        parties=PARTIES,
         # Give each city a distinct partisan lean so spatial clusters are
         # visually identifiable.  Cities 0–2 have strong leans; 3–4 have
         # moderate secondary leans.
@@ -70,21 +107,30 @@ def base_config(**kwargs):
 
 
 def base_events():
+    # Events describe world changes only.  Which party benefits is determined
+    # automatically by party platform alignment with the attribute deltas.
     return EventSchedule([
         ExternalEvent(
-            name="Economic recession", time_step=30, party_index=1,
+            # Capital falls → Progressive (capital: -0.6) gains;
+            # Conservative (capital: +0.4) loses.
+            name="Economic recession", time_step=30,
             strength=0.7, effectiveness=0.6,
-            attribute_appeal={"capital": 0.8, "family_status": 0.3},
+            attribute_appeal={"capital": 0.8},
             attribute_deltas={"capital": -0.15},
         ),
         ExternalEvent(
-            name="Pro-family campaign", time_step=50, party_index=0,
+            # Family-values messaging raises family_status salience →
+            # Conservative (family_status: +0.7) gains;
+            # Green (family_status: -0.2) loses slightly.
+            name="Pro-family campaign", time_step=50,
             strength=0.8, effectiveness=0.7,
-            attribute_appeal={"family_status": 0.9, "health_status": 0.2},
-            attribute_deltas={},
+            attribute_appeal={"family_status": 0.9},
+            attribute_deltas={"family_status": +0.08},
         ),
         ExternalEvent(
-            name="Healthcare crisis", time_step=70, party_index=2,
+            # Health deteriorates → Green (health_status: -0.5) gains;
+            # Progressive (health_status: +0.2) loses slightly.
+            name="Healthcare crisis", time_step=70,
             strength=0.6, effectiveness=0.8,
             attribute_appeal={"health_status": 0.9, "age": 0.4},
             attribute_deltas={"health_status": -0.2},

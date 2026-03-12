@@ -1,4 +1,4 @@
-"""External events and party messaging model."""
+"""External events and party platform model."""
 
 from __future__ import annotations
 
@@ -12,37 +12,66 @@ from config import ATTR_NAMES
 
 
 @dataclass
+class Party:
+    """A political party defined by its platform — which voter attributes it appeals to.
+
+    Platform weights follow a linear convention:
+    - positive weight on attribute X → party appeals to voters *high* in X
+    - negative weight on attribute X → party appeals to voters *low* in X
+
+    When a world event shifts attribute X by delta, the opinion toward this party
+    changes (for each node) by::
+
+        Δopinion[p] += (platform · event_delta) × (event_appeal · attrs) × receptivity
+
+    so parties never need to know which events benefit them — the alignment
+    emerges automatically from their platform and the event's attribute changes.
+    """
+
+    name: str
+    platform: dict[str, float] = field(default_factory=dict)
+
+    def platform_vector(self) -> NDArray:
+        """Return a (N_ATTRIBUTES,) array of platform weights."""
+        vec = np.zeros(len(ATTR_NAMES), dtype=np.float64)
+        for attr, w in self.platform.items():
+            vec[ATTR_NAMES.index(attr)] = w
+        return vec
+
+
+@dataclass
 class ExternalEvent:
-    """An event or party message that fires at a specific time step.
+    """A world event or contextual shock that fires at a specific time step.
+
+    Events describe changes in the world (e.g. a recession, a health crisis,
+    a campaign that shifts issue salience).  They do NOT specify which party
+    benefits — that emerges from each party's platform alignment with the
+    attribute changes.
 
     Parameters
     ----------
     name : str
-        Human-readable label, e.g. "Party A pro-family campaign".
+        Human-readable label, e.g. "Economic recession".
     time_step : int
         The simulation step at which this event fires.
-    party_index : int | None
-        Which party's opinion column receives the nudge.
-        None means a non-partisan shock (only attribute deltas apply).
     strength : float
-        Message strength / budget in [0, 1].
+        Overall event intensity in [0, 1].
     effectiveness : float
-        How well-crafted the message is in [0, 1].
+        How salient / well-communicated the event is in [0, 1].
     attribute_appeal : dict[str, float]
-        Maps attribute names to appeal weights.
-        The dot product of this vector with a node's attributes gives
-        *relevance* — how much the message resonates with that node.
+        Maps attribute names to weights that control which nodes are most
+        *susceptible* to this event.  ``event_appeal · attrs[i]`` gives the
+        per-node resonance — high-resonance nodes experience a larger nudge.
     attribute_deltas : dict[str, float]
-        Direct changes to node attributes (e.g. {"capital": -0.1}
-        for an economic shock).  Applied to all targeted nodes.
+        Persistent changes applied to node attributes (e.g. ``{"capital": -0.15}``
+        for an economic shock).  Determines which parties gain/lose support via
+        their platform alignment.
     target_filter : callable or None
-        Optional predicate ``(attributes_row) -> bool`` to restrict which
-        nodes are affected.  ``None`` means all nodes.
+        Optional predicate ``(attributes_row) -> bool`` to restrict affected nodes.
     """
 
     name: str
     time_step: int
-    party_index: int | None = None
     strength: float = 1.0
     effectiveness: float = 1.0
     attribute_appeal: dict[str, float] = field(default_factory=dict)
@@ -72,10 +101,9 @@ class ExternalEvent:
         n = attributes.shape[0]
         if self.target_filter is None:
             return np.ones(n, dtype=bool)
-        mask = np.array(
+        return np.array(
             [self.target_filter(attributes[i]) for i in range(n)], dtype=bool
         )
-        return mask
 
 
 @dataclass

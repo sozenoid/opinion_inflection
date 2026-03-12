@@ -86,6 +86,11 @@ class SimConfig:
     influence_weight_min: float = 0.1
     influence_weight_max: float = 0.5
 
+    # --- Parties ---
+    # list[Party] defining each party's platform.  None → n_parties anonymous
+    # parties with empty platforms (events have no opinion effect).
+    parties: list | None = None  # elements are opsim.events.Party
+
     # --- Simulation ---
     n_steps: int = 100
     history_interval: int = 1  # record every N steps

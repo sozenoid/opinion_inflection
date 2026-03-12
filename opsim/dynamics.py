@@ -7,7 +7,7 @@ from numpy.typing import NDArray
 from scipy import sparse
 
 from config import SimConfig, ATTR_CREDULITY, ATTR_CHARISMA
-from opsim.events import ExternalEvent
+from opsim.events import ExternalEvent, Party
 from opsim.node import compute_susceptibility
 
 
@@ -29,19 +29,35 @@ def _apply_message_nudge(
     opinions: NDArray,
     attributes: NDArray,
     event: ExternalEvent,
+    parties: list[Party],
     mask: NDArray,
 ) -> None:
-    """Nudge opinions toward *event.party_index* for targeted nodes."""
-    if event.party_index is None:
+    """Nudge opinions using party platform alignment with the event's world changes.
+
+    For each party p and each node i:
+        Δopinion[i, p] = (party_p.platform · event.delta_attrs)
+                         × (event.appeal · attrs[i])
+                         × receptivity[i]
+
+    The first term is a scalar — how much the world change benefits party p.
+    The second term is per-node — how much node i is susceptible to this event.
+    Parties never hard-code which events they benefit from; it emerges from
+    their platform.
+    """
+    delta_vec = event.delta_vector()  # (A,)
+    if not np.any(delta_vec):
         return
-    appeal = event.appeal_vector()  # (A,)
-    # relevance = attributes @ appeal → (N,)
-    relevance = attributes @ appeal
-    credulity = attributes[:, ATTR_CREDULITY]
-    receptivity = credulity * event.strength * event.effectiveness
-    delta = relevance * receptivity  # (N,)
-    # Apply only to masked nodes
-    opinions[mask, event.party_index] += delta[mask]
+
+    # Per-node resonance: how much each node is susceptible to this event
+    node_resonance = attributes @ event.appeal_vector()  # (N,)
+    receptivity = attributes[:, ATTR_CREDULITY] * event.strength * event.effectiveness
+    scaled = (node_resonance * receptivity)[mask]  # (n_masked,)
+
+    for p, party in enumerate(parties):
+        platform_gain = float(party.platform_vector() @ delta_vec)  # scalar
+        if platform_gain == 0.0:
+            continue
+        opinions[mask, p] += scaled * platform_gain
 
 
 def _peer_influence(
@@ -97,6 +113,7 @@ def step(
     events_now: list[ExternalEvent],
     config: SimConfig,
     rng: np.random.Generator,
+    parties: list[Party] | None = None,
 ) -> tuple[NDArray, NDArray]:
     """Execute one synchronous time step.
 
@@ -124,10 +141,11 @@ def step(
     charisma = attributes[:, ATTR_CHARISMA]
 
     # Phase 2: message nudges (accumulate into a copy)
+    _parties = parties or []
     new_opinions = opinions.copy()
     for event in events_now:
         mask = event.compute_target_mask(attributes)
-        _apply_message_nudge(new_opinions, attributes, event, mask)
+        _apply_message_nudge(new_opinions, attributes, event, _parties, mask)
 
     # Phase 3: peer influence (reads from *opinions*, writes to *new_opinions*)
     peer_delta = _peer_influence(

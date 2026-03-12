@@ -9,7 +9,7 @@ from scipy import sparse
 
 from config import SimConfig, N_ATTRIBUTES, ATTR_CREDULITY, ATTR_CHARISMA
 from opsim.dynamics import step
-from opsim.events import ExternalEvent
+from opsim.events import ExternalEvent, Party
 
 
 def _make_state(n, p, seed=0):
@@ -73,41 +73,52 @@ def test_bounded_confidence_blocks_distant_opinions():
 
 
 def test_event_shifts_opinions_by_attribute():
-    """A pro-family event should shift high-family nodes more than low-family ones."""
-    cfg = SimConfig(n_nodes=4, n_parties=2, noise_std=0.0, random_seed=0)
+    """High-family nodes should shift more toward the family-values party after a
+    family-salience event — because that party's platform weights family_status
+    positively and the event increases family_status."""
+    from config import ATTR_FAMILY
+    parties = [
+        Party(name="FamilyValues", platform={"family_status": 1.0}),
+        Party(name="Other"),
+    ]
+    cfg = SimConfig(n_nodes=4, n_parties=2, noise_std=0.0, random_seed=0,
+                    parties=parties)
     W = sparse.csr_matrix((4, 4))
 
     attrs = np.full((4, N_ATTRIBUTES), 0.5)
-    # Node 0,1: high family, Node 2,3: low family
-    from config import ATTR_FAMILY
-    attrs[0, ATTR_FAMILY] = 0.9
+    attrs[0, ATTR_FAMILY] = 0.9   # high family
     attrs[1, ATTR_FAMILY] = 0.8
-    attrs[2, ATTR_FAMILY] = 0.1
+    attrs[2, ATTR_FAMILY] = 0.1   # low family
     attrs[3, ATTR_FAMILY] = 0.2
-    # Same credulity for all
     attrs[:, ATTR_CREDULITY] = 0.5
 
     opinions = np.zeros((4, 2))
     rng = np.random.default_rng(0)
 
+    # Event raises family_status salience; family-values party benefits
     event = ExternalEvent(
         name="pro-family",
         time_step=0,
-        party_index=0,
         strength=1.0,
         effectiveness=1.0,
         attribute_appeal={"family_status": 1.0},
+        attribute_deltas={"family_status": 0.2},
     )
 
-    _, new_opinions = step(W, attrs, opinions, [event], cfg, rng)
-    # Party 0 opinion should increase more for high-family nodes
+    _, new_opinions = step(W, attrs, opinions, [event], cfg, rng, parties=parties)
+    # Party 0 (FamilyValues) should gain more for high-family nodes
     assert new_opinions[0, 0] > new_opinions[2, 0]
     assert new_opinions[1, 0] > new_opinions[3, 0]
 
 
 def test_credulity_modulates_event_impact():
     """High-credulity nodes should shift more than low-credulity ones for same event."""
-    cfg = SimConfig(n_nodes=2, n_parties=2, noise_std=0.0, random_seed=0)
+    parties = [
+        Party(name="HealthParty"),
+        Party(name="HealthAdvocate", platform={"health_status": -1.0}),
+    ]
+    cfg = SimConfig(n_nodes=2, n_parties=2, noise_std=0.0, random_seed=0,
+                    parties=parties)
     W = sparse.csr_matrix((2, 2))
 
     attrs = np.full((2, N_ATTRIBUTES), 0.5)
@@ -117,16 +128,17 @@ def test_credulity_modulates_event_impact():
     opinions = np.zeros((2, 2))
     rng = np.random.default_rng(0)
 
+    # Health crisis lowers health_status; party 1 (negative weight) benefits
     event = ExternalEvent(
-        name="campaign",
+        name="health-crisis",
         time_step=0,
-        party_index=1,
         strength=1.0,
         effectiveness=1.0,
         attribute_appeal={"health_status": 1.0},
+        attribute_deltas={"health_status": -0.2},
     )
 
-    _, new_opinions = step(W, attrs, opinions, [event], cfg, rng)
+    _, new_opinions = step(W, attrs, opinions, [event], cfg, rng, parties=parties)
     assert new_opinions[0, 1] > new_opinions[1, 1]
 
 
