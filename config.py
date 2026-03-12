@@ -55,7 +55,10 @@ class SimConfig:
 
     # --- Opinion initialisation ---
     opinion_mean: float = 0.0
-    opinion_std: float = 0.3
+    opinion_std: float = 0.15  # 0.3 put initial L2 distances (~0.73) far above the
+    # default confidence_threshold (0.4), cutting ~85% of edges immediately and
+    # making peer influence negligible between events.  0.15 gives distances ~0.37,
+    # keeping ~70% of edges active so convergence dynamics are clearly visible.
 
     # --- Dynamics ---
     confidence_threshold: float = 0.4  # bounded-confidence ε
